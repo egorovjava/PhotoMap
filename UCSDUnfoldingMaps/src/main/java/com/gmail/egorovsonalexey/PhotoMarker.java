@@ -53,7 +53,7 @@ public class PhotoMarker extends SimplePointMarker {
     @Override
     public void draw(PGraphics pg, float x, float y) {
         if (!hidden) {
-            pg.fill(0, 255, 0);
+            pg.fill(255, 0, 255);
             pg.ellipse(x, y, radius, radius);
             if (selected) {
                 showTitle(pg, x, y);
