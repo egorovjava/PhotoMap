@@ -1,13 +1,10 @@
 package com.gmail.egorovsonalexey;
 
-import com.google.api.client.util.DateTime;
 import de.fhpotsdam.unfolding.geo.Location;
 import de.fhpotsdam.unfolding.marker.SimplePointMarker;
 import processing.core.PConstants;
 import processing.core.PGraphics;
 
-import java.awt.*;
-import java.awt.geom.Point2D;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -19,7 +16,9 @@ public class PhotoMarker extends SimplePointMarker {
 
     public void showTitle(PGraphics pg, float x, float y)
     {
-        String title = this.getFileName();
+        double _fileSize = this.getFileSize() / 1000000f;
+        String title = String.format("%s; %s; %3.1f MB",
+                this.getFileName(), this.getCreateDate(), _fileSize);
         pg.pushStyle();
 
         pg.rectMode(PConstants.CORNER);
@@ -46,14 +45,19 @@ public class PhotoMarker extends SimplePointMarker {
         return this.getStringProperty("url");
     }
 
-    public Date getDateCreate() { return (Date) this.getProperty("createDate"); }
+    public Date getCreateDate() { return (Date) this.getProperty("createDate"); }
 
     public String getFileId() { return this.getStringProperty("fileId"); }
+
+    private String getDevice() { return this.getStringProperty( "device"); }
+
+    private long getFileSize() { return (long)this.getProperty("size"); }
 
     @Override
     public void draw(PGraphics pg, float x, float y) {
         if (!hidden) {
-            pg.fill(255, 0, 255);
+            //pg.fill(255, 0, 255);
+            pg.fill(this.color);
             pg.ellipse(x, y, radius, radius);
             if (selected) {
                 showTitle(pg, x, y);
