@@ -46,8 +46,8 @@ public class PhotoMap extends PApplet
 	public static String mbTilesString = "blankLight-1-3.mbtiles";
 	private static final boolean offline = false;
 	//private static final String imageDirName = "C:\\Users\\Alexey\\Pictures\\Temp";
-	private static final String imageDirName = "C:\\Users\\Alexey\\Pictures";
-	//private static final String imageDirName = "C:\\Users\\Пользовательь\\Pictures\\Nokia";
+	//private static final String imageDirName = "C:\\Users\\Alexey\\Pictures";
+	private static final String imageDirName = "C:\\Users\\Пользовательь\\Pictures";
 
 	UnfoldingMap map;
 	List<Marker> markers;
@@ -67,8 +67,8 @@ public class PhotoMap extends PApplet
 
 	@Override
 	public void setup() {
-		//size(1366, 768, OPENGL);
-		size(1280, 1024);
+		size(1366, 768, OPENGL);
+		//size(1280, 1024);
 		this.background(200, 100, 100);
 		this.minCreatedDate = new Date(0);
 		this.deviceList = new HashMap<>();
@@ -94,7 +94,7 @@ public class PhotoMap extends PApplet
 				if (gps == null) {
 					continue;
 				}
-				printMetadata(metadata);
+				//printMetadata(metadata);
 				GeoLocation _location = gps.getGeoLocation();
 				if (_location != null) {
 					double _lat = _location.getLatitude();
@@ -115,16 +115,18 @@ public class PhotoMap extends PApplet
 					ExifIFD0Directory _exif = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
 					if (_exif != null) {
 						String _deviceName = _exif.getString(ExifIFD0Directory.TAG_MAKE);
-						String _model = _exif.getString(ExifIFD0Directory.TAG_MODEL);
-						String _device = String.format("%s %s", _deviceName, _model);
-						if (!deviceList.containsKey(_device)) {
-							// Random color without any transparency.
-							// Transparency make the same color markers look like different dependency of background.
-							deviceList.put(_device, 0xff000000 + _rnd.nextInt(0x00ffffff));
+						if(_deviceName != null) {
+							String _model = _exif.getString(ExifIFD0Directory.TAG_MODEL);
+							String _device = String.format("%s %s", _deviceName, _model);
+							if (!deviceList.containsKey(_device)) {
+								// A random color without any transparency.
+								// Transparency make the same color markers look like different dependency of the background.
+								deviceList.put(_device, 0xff000000 + _rnd.nextInt(0x00ffffff));
+							}
+							_marker.setProperty("device", _device);
+							_marker.setColor(this.deviceList.get(_device));
+							System.out.printf("%s: %s, %s\n", file.getName(), _location.toDMSString(), _device);
 						}
-						_marker.setProperty("device", _device);
-						_marker.setColor(this.deviceList.get(_device));
-						System.out.printf("%s: %s, %s\n", file.getName(), _location.toDMSString(), _device);
 					}
 					this.markers.add(_marker);
 				}
@@ -138,7 +140,7 @@ public class PhotoMap extends PApplet
 		this.keyWidth = 3 * this.deviceList.keySet().stream().map(x -> (int) this.textWidth(x)).max(Integer::compare).get() / 2;
 
 		map = new UnfoldingMap(this,
-				xbase + this.keyWidth, ybase, 1150, 600, provider);
+				xbase + this.keyWidth + 10, ybase, 1150, 700, provider);
 		map.zoomAndPanTo(zoomLevel, new Location(53f, 35f));
 		MapUtils.createDefaultEventDispatcher(this, map);
 		map.addMarkers(markers);
@@ -171,7 +173,7 @@ public class PhotoMap extends PApplet
 
 			if (img.height > 0) {
 				img.resize(0, (int)map.getHeight());  //resize loaded image to full height of map
-				image(img, xbase + 140, ybase);        //display image
+				image(img, xbase + this.keyWidth + 10, ybase);        //display image
 			}
 //			} catch (IOException ex) {
 //				System.out.println(ex);
@@ -359,9 +361,9 @@ public class PhotoMap extends PApplet
 		fill(0);
 		strokeWeight(2);
 		text("Date create filter:", xbase + 15, ybase + 20);
-		text("last month", xbase + 40, ybase + 40);
-		text("last year", xbase + 40, ybase + 60);
-		text("all", xbase + 40, ybase + 80);
+		text("last month", xbase + 40, ybase + 45);
+		text("last year", xbase + 40, ybase + 65);
+		text("all", xbase + 40, ybase + 85);
 		fill(0xffffff);
 		ellipse(xbase + 20, ybase + 40, 14, 14);
 		ellipse(xbase + 20, ybase + 60, 14, 14);
@@ -382,7 +384,7 @@ public class PhotoMap extends PApplet
 			}
 		}
 
-		text("Devices:", xbase + 40, ybase + 100);
+		text("Devices:", xbase + 40, ybase + 105);
 
 		int count = 0;
 		for(Map.Entry<String, Integer> _device: this.deviceList.entrySet()) {
@@ -390,7 +392,7 @@ public class PhotoMap extends PApplet
 			int y = ybase + 120 + count * 20;
 			ellipse(xbase + 20, y, 14, 14);
 			fill(0);
-			text(_device.getKey(), xbase + 40, y);
+			text(_device.getKey(), xbase + 40, y + 5);
 			count++;
 		}
 
