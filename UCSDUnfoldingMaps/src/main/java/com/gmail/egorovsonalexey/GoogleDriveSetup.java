@@ -1,38 +1,21 @@
 package com.gmail.egorovsonalexey;
 
+import com.google.api.client.auth.oauth2.BearerToken;
+import com.google.api.client.auth.oauth2.ClientParametersAuthentication;
 import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
-import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.client.util.store.FileDataStoreFactory;
-import com.google.api.services.drive.Drive;
-import com.google.api.services.drive.DriveScopes;
-import com.google.api.services.drive.model.File;
-import com.google.api.services.drive.model.FileList;
-
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.security.GeneralSecurityException;
-import java.util.Collections;
-import java.util.List;
 
 public class GoogleDriveSetup {
+
+    static final String CLIENT_ID = "1078260760548-en0npkq7mmo5fs0q4bvdq8rv40vi8q7l.apps.googleusercontent.com";
+    static final String CLIENT_SECRET = "MUVvRCmDmy_fV5Me29N1Llh2";
+    static final String ACCESS_TOKEN = "ya29.a0AfH6SMCh8yKXzwiRbYx4XydUA01nnzE1HQeuEiCB0JKyub0GxCdayjtcgoQWCXxe6Ag1YzuchVSVO44dAVkocAwkswIvEYT4QSphlFDlDSGfYgltjj2LrI3PfJz68dEfaRjoj6hr-6fvnAl6tFvJn8Z189Sv_HwHgr8";
+    static final String REFRESH_TOKEN = "1//04zaBfuzdxAokCgYIARAAGAQSNwF-L9Irxg-kshhiEugZb2VhfO6smZBy8QcHHMTT7FmXCD8mGika-QnAURMmC3I0RcrB1ASoIRs";
     static final String APPLICATION_NAME = "Photo Map";
     static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
-    static final String TOKENS_DIRECTORY_PATH = "tokens";
-
-    //private static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE_METADATA_READONLY);
-    private  static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE_PHOTOS_READONLY);
-    private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
-    //private static final String CREDENTIALS_FILE_PATH =
-    //        "/client_secret_570704290754-jmue301dmkhq1h5l1bhpjv58q0rieict.apps.googleusercontent.com.json";
 
     /**
      * Creates an authorized Credential object.
@@ -41,19 +24,16 @@ public class GoogleDriveSetup {
      * @throws IOException If the credentials.json file cannot be found.
      */
     static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT) throws IOException {
-        // Load client secrets.
-        InputStream in = GoogleDriveSetup.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
-        if (in == null) {
-            throw new FileNotFoundException("Resource not found: " + CREDENTIALS_FILE_PATH);
-        }
-        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
 
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
-                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
-                .setAccessType("offline")
-                .build();
-        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
-        return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
+        return new Credential.Builder(BearerToken.authorizationHeaderAccessMethod())
+                .setJsonFactory(JSON_FACTORY)
+                .setTransport(HTTP_TRANSPORT)
+                .setClientAuthentication(new ClientParametersAuthentication(CLIENT_ID, CLIENT_SECRET))
+                .setTokenServerEncodedUrl("https://oauth2.googleapis.com/token")
+                .build()
+            .setAccessToken(ACCESS_TOKEN)
+            .setRefreshToken(REFRESH_TOKEN)
+            .setExpirationTimeMilliseconds(3000L);
     }
+
 }

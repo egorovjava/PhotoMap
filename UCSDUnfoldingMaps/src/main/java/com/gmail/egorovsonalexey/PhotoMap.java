@@ -15,6 +15,7 @@ import com.drew.metadata.file.FileSystemDirectory;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.model.About;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import de.fhpotsdam.unfolding.marker.Marker;
@@ -25,6 +26,12 @@ import de.fhpotsdam.unfolding.geo.Location;
 import de.fhpotsdam.unfolding.utils.MapUtils;
 import processing.core.PImage;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
+import javax.imageio.ImageReader;
+import javax.imageio.ImageTypeSpecifier;
+import javax.imageio.stream.ImageInputStream;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -67,12 +74,11 @@ public class PhotoMap extends PApplet
 
 	@Override
 	public void setup() {
-		size(1366, 768, OPENGL);
-		//size(1280, 1024);
+		//size(1366, 768, OPENGL);
+		size(1280, 1024);
 		this.background(200, 100, 100);
 		this.minCreatedDate = new Date(0);
 		this.deviceList = new HashMap<>();
-		Random _rnd = new Random();
 
 		AbstractMapProvider provider = new OpenStreetMap.OpenStreetMapProvider();
 		//AbstractMapProvider provider = new Microsoft.RoadProvider();
@@ -84,60 +90,12 @@ public class PhotoMap extends PApplet
 		}
 
 		markers = new ArrayList<>();
-		List<java.io.File> files = getAllFiles(imageDirName);
-		System.out.println("Files count: " + files.size());
-		for (java.io.File file : files) {
-			try {
-				Metadata metadata = ImageMetadataReader.readMetadata(file);
-
-				GpsDirectory gps = metadata.getFirstDirectoryOfType(GpsDirectory.class);
-				if (gps == null) {
-					continue;
-				}
-				//printMetadata(metadata);
-				GeoLocation _location = gps.getGeoLocation();
-				if (_location != null) {
-					double _lat = _location.getLatitude();
-					double _lon = _location.getLongitude();
-					if (_lat == 0 && _lon == 0) {
-						continue;
-					}
-					Location _loc = new Location(_lat, _lon);
-					FileSystemDirectory fileSystem =
-							metadata.getFirstDirectoryOfType(FileSystemDirectory.class);
-					long _fileSize = fileSystem.getLong(FileSystemDirectory.TAG_FILE_SIZE);
-					PhotoMarker _marker =
-							new PhotoMarker(_loc, new HashMap<>());
-					_marker.setProperty("size", _fileSize);
-					_marker.setProperty("fileName", file.getName());
-					_marker.setProperty("url", file.getAbsolutePath());
-					_marker.setProperty("createDate", fileSystem.getDate(FileSystemDirectory.TAG_FILE_MODIFIED_DATE));
-					ExifIFD0Directory _exif = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
-					if (_exif != null) {
-						String _deviceName = _exif.getString(ExifIFD0Directory.TAG_MAKE);
-						if(_deviceName != null) {
-							String _model = _exif.getString(ExifIFD0Directory.TAG_MODEL);
-							String _device = String.format("%s %s", _deviceName, _model);
-							if (!deviceList.containsKey(_device)) {
-								// A random color without any transparency.
-								// Transparency make the same color markers look like different dependency of the background.
-								deviceList.put(_device, 0xff000000 + _rnd.nextInt(0x00ffffff));
-							}
-							_marker.setProperty("device", _device);
-							_marker.setColor(this.deviceList.get(_device));
-							System.out.printf("%s: %s, %s\n", file.getName(), _location.toDMSString(), _device);
-						}
-					}
-					this.markers.add(_marker);
-				}
-			} catch (ImageProcessingException | IOException | MetadataException | IndexOutOfBoundsException ex) {
-				System.out.println(ex);
-				System.out.println(file.getAbsolutePath());
-			}
-		}
+		initMarkersFromGoogleDrive();
 		System.out.println("Markers count: " + markers.size());
 		this.keyHeight = 120 + this.deviceList.size() * 20;
-		this.keyWidth = 3 * this.deviceList.keySet().stream().map(x -> (int) this.textWidth(x)).max(Integer::compare).get() / 2;
+		this.keyWidth = 3 * this.deviceList.keySet().stream()
+				.map(x -> (int) this.textWidth(x))
+				.max(Integer::compare).get() / 2;
 
 		map = new UnfoldingMap(this,
 				xbase + this.keyWidth + 10, ybase, 1150, 700, provider);
@@ -152,32 +110,34 @@ public class PhotoMap extends PApplet
 			map.draw();
 			this.addKey();
 		} else {
-//			try {
+			try {
 
-//				String fileId = lastClicked.getFileId();
-//				OutputStream outputStream = new ByteArrayOutputStream();
-//				service.files().get(fileId).executeMediaAndDownloadTo(outputStream);
-//
-//				ImageInputStream stream = ImageIO.createImageInputStream(outputStream);
-//				ImageReader reader = ImageIO.getImageReaders(stream).next(); // TODO: Test hasNext()
-//				reader.setInput(stream);
-//
-//				ImageTypeSpecifier spec = reader.getImageTypes(0).next(); // TODO: Test hasNext();
-//
-//				ImageReadParam param = reader.getDefaultReadParam();
-//				BufferedImage image = reader.read(0, param);
+				String fileId = lastClicked.getFileId();
+				OutputStream outputStream = new ByteArrayOutputStream();
+				service.files().get(fileId).executeMediaAndDownloadTo(outputStream);
 
-			if (img == null) {
-				img = loadImage(lastClicked.getUrl());
-			}
+				ImageInputStream stream = ImageIO.createImageInputStream(outputStream);
+				ImageReader reader = ImageIO.getImageReaders(stream).next(); // TODO: Test hasNext()
+				reader.setInput(stream);
 
+				ImageTypeSpecifier spec = reader.getImageTypes(0).next(); // TODO: Test hasNext();
+
+				ImageReadParam param = reader.getDefaultReadParam();
+				BufferedImage bufferedImage = reader.read(0, param);
+				img = new PImage(bufferedImage);
+
+//			if (img == null) {
+//				img = loadImage(lastClicked.getUrl());
+//			}
+//
 			if (img.height > 0) {
 				img.resize(0, (int)map.getHeight());  //resize loaded image to full height of map
 				image(img, xbase + this.keyWidth + 10, ybase);        //display image
 			}
-//			} catch (IOException ex) {
-//				System.out.println(ex);
-//			}
+
+			} catch (IOException ex) {
+				System.out.println(ex);
+			}
 		}
 	}
 
@@ -212,10 +172,12 @@ public class PhotoMap extends PApplet
 					.setPageSize(100)
 					.setFields("*")
 					.execute();
+
 			List<File> files = result.getFiles();
 			if (files == null || files.isEmpty()) {
 				System.out.println("No files found.");
 			} else {
+				Random _rnd = new Random();
 				System.out.println("Files:");
 				for (File file : files) {
 					System.out.printf("%s (%s)\n", file.getName(), file.getId());
@@ -231,6 +193,20 @@ public class PhotoMap extends PApplet
 							_marker.setProperty("createDate", new Date(file.getCreatedTime().getValue()));
 							_marker.setProperty("fileId", file.getId());
 							_marker.setProperty("size", file.getSize());
+
+							String _deviceName = _metaData.getCameraMake();
+							if (_deviceName != null) {
+								String _model = _metaData.getCameraModel();
+								String _device = String.format("%s %s", _deviceName, _model);
+								if (!deviceList.containsKey(_device)) {
+									// A random color without any transparency.
+									// Transparency make the same color markers look like different dependency of the background.
+									deviceList.put(_device, 0xff000000 + _rnd.nextInt(0x00ffffff));
+								}
+								_marker.setProperty("device", _device);
+								_marker.setColor(this.deviceList.get(_device));
+								System.out.printf("%s: %s, %s\n", file.getName(), _location, _device);
+							}
 							this.markers.add(_marker);
 						}
 					}
@@ -238,6 +214,61 @@ public class PhotoMap extends PApplet
 			}
 		} catch (IOException | GeneralSecurityException ex) {
 			System.out.println(ex);
+		}
+	}
+
+	private void initMarkersFromFileSystem() {
+		List<java.io.File> files = getAllFiles(imageDirName);
+		System.out.println("Files count: " + files.size());
+		Random _rnd = new Random();
+		for (java.io.File file : files) {
+			try {
+				Metadata metadata = ImageMetadataReader.readMetadata(file);
+
+				GpsDirectory gps = metadata.getFirstDirectoryOfType(GpsDirectory.class);
+				if (gps == null) {
+					continue;
+				}
+				//printMetadata(metadata);
+				GeoLocation _location = gps.getGeoLocation();
+				if (_location != null) {
+					double _lat = _location.getLatitude();
+					double _lon = _location.getLongitude();
+					if (_lat == 0 && _lon == 0) {
+						continue;
+					}
+					Location _loc = new Location(_lat, _lon);
+					FileSystemDirectory fileSystem =
+							metadata.getFirstDirectoryOfType(FileSystemDirectory.class);
+					long _fileSize = fileSystem.getLong(FileSystemDirectory.TAG_FILE_SIZE);
+					PhotoMarker _marker =
+							new PhotoMarker(_loc, new HashMap<>());
+					_marker.setProperty("size", _fileSize);
+					_marker.setProperty("fileName", file.getName());
+					_marker.setProperty("url", file.getAbsolutePath());
+					_marker.setProperty("createDate", fileSystem.getDate(FileSystemDirectory.TAG_FILE_MODIFIED_DATE));
+					ExifIFD0Directory _exif = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
+					if (_exif != null) {
+						String _deviceName = _exif.getString(ExifIFD0Directory.TAG_MAKE);
+						if (_deviceName != null) {
+							String _model = _exif.getString(ExifIFD0Directory.TAG_MODEL);
+							String _device = String.format("%s %s", _deviceName, _model);
+							if (!deviceList.containsKey(_device)) {
+								// A random color without any transparency.
+								// Transparency make the same color markers look like different dependency of the background.
+								deviceList.put(_device, 0xff000000 + _rnd.nextInt(0x00ffffff));
+							}
+							_marker.setProperty("device", _device);
+							_marker.setColor(this.deviceList.get(_device));
+							System.out.printf("%s: %s, %s\n", file.getName(), _location.toDMSString(), _device);
+						}
+					}
+					this.markers.add(_marker);
+				}
+			} catch (ImageProcessingException | IOException | MetadataException | IndexOutOfBoundsException ex) {
+				System.out.println(ex);
+				System.out.println(file.getAbsolutePath());
+			}
 		}
 	}
 

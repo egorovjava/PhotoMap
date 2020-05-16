@@ -46,6 +46,7 @@ public class PhotoMarker extends SimplePointMarker {
     }
 
     public Date getCreateDate() { return (Date) this.getProperty("createDate"); }
+    
 
     public String getFileId() { return this.getStringProperty("fileId"); }
 
