@@ -114,7 +114,15 @@ public class PhotoMap extends PApplet
 
 				String fileId = lastClicked.getFileId();
 				OutputStream outputStream = new ByteArrayOutputStream();
+
+				final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+				service = new Drive.Builder(
+						HTTP_TRANSPORT,
+						GoogleDriveSetup.JSON_FACTORY,
+						GoogleDriveSetup.getCredentials(HTTP_TRANSPORT)
+				).build();
 				service.files().get(fileId).executeMediaAndDownloadTo(outputStream);
+
 
 				ImageInputStream stream = ImageIO.createImageInputStream(outputStream);
 				ImageReader reader = ImageIO.getImageReaders(stream).next(); // TODO: Test hasNext()
@@ -135,7 +143,7 @@ public class PhotoMap extends PApplet
 				image(img, xbase + this.keyWidth + 10, ybase);        //display image
 			}
 
-			} catch (IOException ex) {
+			} catch (IOException | GeneralSecurityException ex) {
 				System.out.println(ex);
 			}
 		}
